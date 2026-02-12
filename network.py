@@ -64,7 +64,7 @@ class MaskDecoderHigh(MaskDecoder):
         checkpoint_dict = {"vit_b":"pretrained_checkpoint/sam_vit_b_maskdecoder.pth",
                            "vit_l":"pretrained_checkpoint/sam_vit_l_maskdecoder.pth",
                            'vit_h':"pretrained_checkpoint/sam_vit_h_maskdecoder.pth",
-                           'vit_tiny': "pretrained_checkpoint/vit_tiny_maskdecoder.pt"}  #
+                           'vit_tiny': "/Users/yueherngtang/Desktop/WSI-SAM/checkpoint/vit_tiny_maskdecoder.pt"}  #
         checkpoint_path = checkpoint_dict[model_type]
         self.load_state_dict(torch.load(checkpoint_path), strict=False)
         for n,p in self.named_parameters():
@@ -132,13 +132,53 @@ class MaskDecoderHigh(MaskDecoder):
         masks_wsi_token = []
         wsi_image_embeddings = []
         for i_batch in range(batch_len):
+
+            # 1. Extract the slice for this batch item
+            curr_img_emb = image_embeddings[i_batch]
+            curr_img_pe = image_pe[i_batch]
+            curr_sparse = sparse_prompt_embeddings[i_batch]
+            curr_dense = dense_prompt_embeddings[i_batch]
+            curr_wsi = wsi_features[i_batch]
+
+            # 2. Force them to be 4D (Image) or 3D (Prompts)
+            # If they are missing the batch dim (e.g. they are 3D), add it back.
+            # If they already have it (e.g. 4D because of some upstream wrapper), leave them alone.
+            
+            if curr_img_emb.dim() == 3: curr_img_emb = curr_img_emb.unsqueeze(0)
+            if curr_img_pe.dim() == 3: curr_img_pe = curr_img_pe.unsqueeze(0)
+            
+            # Prompts must be 3D: (1, N_points, 256)
+            if curr_sparse.dim() == 2: curr_sparse = curr_sparse.unsqueeze(0)
+            if curr_dense.dim() == 3: curr_dense = curr_dense.unsqueeze(0)
+            
+            if curr_wsi.dim() == 1: curr_wsi = curr_wsi.unsqueeze(0) # (1, 256) for vector
+            elif curr_wsi.dim() == 3: curr_wsi = curr_wsi.unsqueeze(0) # (1, C, H, W) for map
+
             mask, iou_pred, mask_wsi_token, wsi_image_embedding = self.predict_masks(
-                image_embeddings=image_embeddings[i_batch].unsqueeze(0),
-                image_pe=image_pe[i_batch],
-                sparse_prompt_embeddings=sparse_prompt_embeddings[i_batch],
-                dense_prompt_embeddings=dense_prompt_embeddings[i_batch],
-                wsi_feature = wsi_features[i_batch].unsqueeze(0)
+                image_embeddings=curr_img_emb,
+                image_pe=curr_img_pe,
+                sparse_prompt_embeddings=curr_sparse,
+                dense_prompt_embeddings=curr_dense,
+                wsi_feature=curr_wsi
             )
+            # mask, iou_pred, mask_wsi_token, wsi_image_embedding = self.predict_masks(
+            #     image_embeddings=image_embeddings[i_batch].unsqueeze(0),
+            #     image_pe=image_pe[i_batch],
+            #     sparse_prompt_embeddings=sparse_prompt_embeddings[i_batch],
+            #     dense_prompt_embeddings=dense_prompt_embeddings[i_batch],
+            #     wsi_feature = wsi_features[i_batch].unsqueeze(0)
+            # )
+            # mask, iou_pred, mask_wsi_token, wsi_image_embedding = self.predict_masks(
+            #     image_embeddings=image_embeddings[i_batch].unsqueeze(0),
+            #     image_pe=image_pe[i_batch].unsqueeze(0),
+                
+            #     # --- FIX: Add unsqueeze(0) here ---
+            #     sparse_prompt_embeddings=sparse_prompt_embeddings[i_batch].unsqueeze(0),
+            #     dense_prompt_embeddings=dense_prompt_embeddings[i_batch].unsqueeze(0),
+            #     # ----------------------------------
+                
+            #     wsi_feature = wsi_features[i_batch].unsqueeze(0)
+            # )
             masks.append(mask)
             iou_preds.append(iou_pred)
             masks_wsi_token.append(mask_wsi_token)
@@ -246,7 +286,7 @@ class MaskDecoderLow(MaskDecoder):
         checkpoint_dict = {"vit_b":"pretrained_checkpoint/sam_vit_b_maskdecoder.pth",
                            "vit_l":"pretrained_checkpoint/sam_vit_l_maskdecoder.pth",
                            'vit_h':"pretrained_checkpoint/sam_vit_h_maskdecoder.pth",
-                           'vit_tiny': "pretrained_checkpoint/vit_tiny_maskdecoder.pt"}  #/home/bme001/20225531/sam-wsi/pretrained_checkpoint/vit_tiny_maskdecoder.pt
+                           'vit_tiny': "/Users/yueherngtang/Desktop/WSI-SAM/checkpoint/vit_tiny_maskdecoder.pt"}  #/home/bme001/20225531/sam-wsi/pretrained_checkpoint/vit_tiny_maskdecoder.pt
         checkpoint_path = checkpoint_dict[model_type]
         self.load_state_dict(torch.load(checkpoint_path))
         for n,p in self.named_parameters():
@@ -314,13 +354,55 @@ class MaskDecoderLow(MaskDecoder):
         masks_wsi_token = []
         wsi_image_embeddings = []
         for i_batch in range(batch_len):
+
+            # 1. Extract the slice for this batch item
+            curr_img_emb = image_embeddings[i_batch]
+            curr_img_pe = image_pe[i_batch]
+            curr_sparse = sparse_prompt_embeddings[i_batch]
+            curr_dense = dense_prompt_embeddings[i_batch]
+            curr_wsi = wsi_features[i_batch]
+
+            # 2. Force them to be 4D (Image) or 3D (Prompts)
+            # If they are missing the batch dim (e.g. they are 3D), add it back.
+            # If they already have it (e.g. 4D because of some upstream wrapper), leave them alone.
+            
+            if curr_img_emb.dim() == 3: curr_img_emb = curr_img_emb.unsqueeze(0)
+            if curr_img_pe.dim() == 3: curr_img_pe = curr_img_pe.unsqueeze(0)
+            
+            # Prompts must be 3D: (1, N_points, 256)
+            if curr_sparse.dim() == 2: curr_sparse = curr_sparse.unsqueeze(0)
+            if curr_dense.dim() == 3: curr_dense = curr_dense.unsqueeze(0)
+            
+            if curr_wsi.dim() == 1: curr_wsi = curr_wsi.unsqueeze(0) # (1, 256) for vector
+            elif curr_wsi.dim() == 3: curr_wsi = curr_wsi.unsqueeze(0) # (1, C, H, W) for map
+
             mask, iou_pred, mask_wsi_token, wsi_image_embedding = self.predict_masks(
-                image_embeddings=image_embeddings[i_batch].unsqueeze(0),
-                image_pe=image_pe[i_batch],
-                sparse_prompt_embeddings=sparse_prompt_embeddings[i_batch],
-                dense_prompt_embeddings=dense_prompt_embeddings[i_batch],
-                wsi_feature = wsi_features[i_batch].unsqueeze(0)
+                image_embeddings=curr_img_emb,
+                image_pe=curr_img_pe,
+                sparse_prompt_embeddings=curr_sparse,
+                dense_prompt_embeddings=curr_dense,
+                wsi_feature=curr_wsi
             )
+
+            # mask, iou_pred, mask_wsi_token, wsi_image_embedding = self.predict_masks(
+            #     image_embeddings=image_embeddings[i_batch].unsqueeze(0),
+            #     image_pe=image_pe[i_batch],
+            #     sparse_prompt_embeddings=sparse_prompt_embeddings[i_batch],
+            #     dense_prompt_embeddings=dense_prompt_embeddings[i_batch],
+            #     wsi_feature = wsi_features[i_batch].unsqueeze(0)
+            # )
+            # mask, iou_pred, mask_wsi_token, wsi_image_embedding = self.predict_masks(
+            #     image_embeddings=image_embeddings[i_batch].unsqueeze(0),
+            #     image_pe=image_pe[i_batch].unsqueeze(0),
+                
+            #     # --- FIX: Add unsqueeze(0) here ---
+            #     sparse_prompt_embeddings=sparse_prompt_embeddings[i_batch].unsqueeze(0),
+            #     dense_prompt_embeddings=dense_prompt_embeddings[i_batch].unsqueeze(0),
+            #     # ----------------------------------
+                
+            #     wsi_feature = wsi_features[i_batch].unsqueeze(0)
+            # )
+
             masks.append(mask)
             iou_preds.append(iou_pred)
             masks_wsi_token.append(mask_wsi_token)

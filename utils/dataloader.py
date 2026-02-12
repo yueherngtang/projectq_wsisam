@@ -171,7 +171,7 @@ class LargeScaleJitter(object):
         https://github.com/gaopengcuhk/Pretrained-Pix2Seq/blob/7d908d499212bfabd33aeaa838778a6bfb7b84cc/datasets/transforms.py 
     """
 
-    def __init__(self, output_size=1024, aug_scale_min=0.1, aug_scale_max=2.0):
+    def __init__(self, output_size=256, aug_scale_min=0.1, aug_scale_max=2.0):
         self.desired_size = torch.tensor(output_size)
         self.aug_scale_min = aug_scale_min
         self.aug_scale_max = aug_scale_max
