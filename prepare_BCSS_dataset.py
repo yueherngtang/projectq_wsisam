@@ -8,13 +8,13 @@ import traceback
 import random
 
 # --- CONFIGURATION ---
-BASE_DIR = '/Volumes/1TB HDD 02/BCSS' 
+BASE_DIR = '/data/vai_aimed/BCSS' 
 IMAGE_DIR = os.path.join(BASE_DIR, 'data/images')
 MASK_DIR = os.path.join(BASE_DIR, 'data/masks')
 JSON_DIR = os.path.join(BASE_DIR, 'data/annotations')
-OUTPUT_DIR = '/Volumes/1TB HDD 02/BCSSAugSplit'
+OUTPUT_DIR = '/data/vai_aimed/BCSS/BCSS_BBox_Aug'
 
-OUTPUT_PATCH_DIR = '/Volumes/1TB HDD 02/BCSSPATCHAugSplit'
+OUTPUT_PATCH_DIR = '/data/vai_aimed/BCSS/BCSSPATCHAugSplit'
 
 PATCH_SIZE_40X = 1024 
 STRIDE = 512
@@ -97,8 +97,6 @@ def get_augmentations(img, mask):
     augs['flipH'] = (cv2.flip(img, 1), cv2.flip(mask, 1))
     augs['flipV'] = (cv2.flip(img, 0), cv2.flip(mask, 0))
     augs['rot90'] = (cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE), cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE))
-    augs['rot180'] = (cv2.rotate(img, cv2.ROTATE_180), cv2.rotate(mask, cv2.ROTATE_180))
-    augs['rot270'] = (cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE), cv2.rotate(mask, cv2.ROTATE_90_CLOCKWISE))
     return augs
 
 # --- STAGE 1 LOGIC: CROP ROI FROM SLIDE ---
@@ -278,9 +276,14 @@ def process_saved_rois_to_patches():
         base_name = os.path.splitext(filename)[0]
         
         # Generate patches
-        count = generate_multires_patches(roi_img, roi_mask, base_name, split_type)
-        print(f"Processed {base_name}: {count} patches ({split_type})")
-        processed += 1
+        try:
+            count = generate_multires_patches(roi_img, roi_mask, base_name, split_type)
+            print(f"Processed {base_name}: {count} patches ({split_type})")
+            processed += 1
+        except Exception as e:
+            print(f"Error processing {base_name}: {e}")
+            traceback.print_exc()
+            continue
 
     # Save JSON
     json_output_path = os.path.join(OUTPUT_PATCH_DIR, "dataset.json")
@@ -299,9 +302,9 @@ if __name__ == "__main__":
     process_saved_rois_to_patches()
 
             
-# IMAGE_DIR = '/Volumes/1TB HDD 02/BCSS/data/images'
-# MASK_DIR = '/Volumes/1TB HDD 02/BCSS/data/masks'
-# OUTPUT_DIR = '/Volumes/1TB HDD 02/test_BCSS2'
+# IMAGE_DIR = '/data/vai_aimed/BCSS/data/images'
+# MASK_DIR = '/data/vai_aimed/BCSS/data/masks'
+# OUTPUT_DIR = '/data/vai_aimed/BCSS/BCSS_BinaryMasks_Original'
 
 # os.makedirs(IMAGE_DIR, exist_ok=True)
 # os.makedirs(MASK_DIR, exist_ok=True)

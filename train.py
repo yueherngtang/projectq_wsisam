@@ -19,17 +19,18 @@ from utils.loss_mask import loss_masks
 
 # ================= CONFIGURATION =================
 DEVICE = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
-DATASET_JSON = "/Volumes/1TB HDD 01/CATCH4WSISAM(withHard-ve&1024)/dataset.json"
-CHECKPOINT_DIR = "/Users/yueherngtang/Desktop/WSI-SAM/checkpoint/trained_checkpoints_b2_1e4schedular_e8_1024x1024_smartloss2"
-PRETRAINED_SAM = "/Users/yueherngtang/Desktop/WSI-SAM/checkpoint/trained_checkpoints_b1_5e5schedular_e10_1024x10242/sam_backbone_ep4.pth"
+print(f"Using device: {DEVICE}")
+DATASET_JSON = "/data/vai_aimed/BCSS/BCSSPATCHAugSplit/dataset.json"
+CHECKPOINT_DIR = "/data/vai_aimed/code/projectq_wsisam/checkpoint/BCSS_1"
+PRETRAINED_SAM = "/data/vai_aimed/code/projectq_wsisam/mobile_sam.pt"
 
 # This overwrites PRETRAINED_SAM, put None if you don't want to load previous weights
-PREVIOUS_CKPT_DIR = "/Users/yueherngtang/Desktop/WSI-SAM/checkpoint/trained_checkpoints_b1_5e5schedular_e10_1024x1024_smartloss"
+PREVIOUS_CKPT_DIR = None
 RESUME_EPOCH = 4 # Epoch number of the previous checkpoint to load
 
 BATCH_SIZE = 2
 LEARNING_RATE = 1e-4
-EPOCHS = 8
+EPOCHS = 15
 IMG_SIZE = 1024
 LAMBDA = 0.5 
 ACCUMULATION_STEPS = 4
@@ -38,9 +39,11 @@ ACCUMULATION_STEPS = 4
 class WSIPairedDataset(Dataset):
     def __init__(self, json_path):
         with open(json_path, 'r') as f:
-            self.data = json.load(f)
+            all_data = json.load(f)
+        self.data = [d for d in all_data if d.get('split') == 'train']
         self.pixel_mean = torch.Tensor([123.675, 116.28, 103.53]).view(-1, 1, 1)
         self.pixel_std = torch.Tensor([58.395, 57.12, 57.375]).view(-1, 1, 1)
+        print(f"Loaded {len(self.data)} training samples from {json_path}")
 
     def __len__(self):
         return len(self.data)
@@ -193,11 +196,11 @@ def main():
         model_high = MaskDecoderHigh(model_type="vit_tiny").to(DEVICE).train()
         model_low = MaskDecoderLow(model_type="vit_tiny").to(DEVICE).train()
 
-    for name, param in sam.named_parameters():
-        if "image_encoder" in name:
-            param.requires_grad = False
-        else:
-            param.requires_grad = True # Keep prompt_encoder trainable!
+    # for name, param in sam.named_parameters():
+    #     if "image_encoder" in name:
+    #         param.requires_grad = False
+    #     else:
+    #         param.requires_grad = True # Keep prompt_encoder trainable!
 
     # Update optimizer to only include trainable parameters
     optimizer = AdamW(
